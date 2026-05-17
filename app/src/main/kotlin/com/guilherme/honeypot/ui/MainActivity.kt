@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,10 +36,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.guilherme.honeypot.R
 import com.guilherme.honeypot.data.AppPreferences
 import com.guilherme.honeypot.service.EmergencyService
 import kotlinx.coroutines.delay
@@ -85,8 +88,8 @@ class MainActivity : ComponentActivity() {
         val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
         scope.launch {
             if (prefs.verifyPin(pin)) {
-                Log.d("Honeypot", "Correct PIN - closing silently")
-                finishAffinity()
+                Log.d("Honeypot", "Correct PIN - triggering emergency")
+                triggerEmergency()
             } else {
                 Log.d("Honeypot", "Wrong PIN - triggering emergency")
                 triggerEmergency()
@@ -105,27 +108,21 @@ fun SplashScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A237E)),
+            .background(Color(0xFF820AD1)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.nubank),
+                contentDescription = "Nubank",
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "B",
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A237E)
-                )
-            }
+                    .size(132.dp)
+                    .clip(RoundedCornerShape(28.dp)),
+                contentScale = ContentScale.Crop
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Banco Digital",
+                text = "Nubank",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -155,10 +152,10 @@ fun PinScreen(onPinSubmit: (String) -> Unit) {
         ) {
             // Header
             Text(
-                text = "Banco Digital",
+                text = "Nubank",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A237E)
+                color = Color(0xFF820AD1)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -176,7 +173,7 @@ fun PinScreen(onPinSubmit: (String) -> Unit) {
                             .size(16.dp)
                             .clip(CircleShape)
                             .background(
-                                if (index < pin.length) Color(0xFF1A237E)
+                                if (index < pin.length) Color(0xFF820AD1)
                                 else Color(0xFFBDBDBD)
                             )
                     )
@@ -236,7 +233,7 @@ fun PinScreen(onPinSubmit: (String) -> Unit) {
                                 Text(
                                     text = digit,
                                     fontSize = 24.sp,
-                                    color = Color(0xFF1A237E)
+                                    color = Color(0xFF820AD1)
                                 )
                             }
                         }

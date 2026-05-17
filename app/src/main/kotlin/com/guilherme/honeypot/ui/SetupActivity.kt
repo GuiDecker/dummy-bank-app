@@ -1,11 +1,15 @@
 package com.guilherme.honeypot.ui
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
+import android.content.pm.PackageManager
+import android.os.Build
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -36,6 +40,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.guilherme.honeypot.BuildConfig
 import com.guilherme.honeypot.data.AppPreferences
 import com.guilherme.honeypot.receiver.MyDeviceAdminReceiver
@@ -45,6 +50,29 @@ class SetupActivity : ComponentActivity() {
 
     private lateinit var prefs: AppPreferences
 
+    private val permissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            val hasForegroundLocation =
+                grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
+                    hasAnyLocationPermission()
+
+            if (hasForegroundLocation) {
+                requestBackgroundLocationPermission()
+            }
+        }
+
+    private val backgroundLocationLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Toast.makeText(
+                    this,
+                    "Permita localizacao em segundo plano para o protocolo completo",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
     companion object {
         private const val REQUEST_DEVICE_ADMIN = 1001
     }
@@ -52,6 +80,7 @@ class SetupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = AppPreferences(this)
+        requestRequiredPermissions()
 
         setContent {
             SetupScreen(
@@ -71,6 +100,40 @@ class SetupActivity : ComponentActivity() {
             )
         }
         startActivityForResult(intent, REQUEST_DEVICE_ADMIN)
+    }
+
+    private fun requestRequiredPermissions() {
+        val permissions = buildList {
+            add(Manifest.permission.CAMERA)
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }.filterNot { hasPermission(it) }
+
+        if (permissions.isNotEmpty()) {
+            permissionsLauncher.launch(permissions.toTypedArray())
+        } else {
+            requestBackgroundLocationPermission()
+        }
+    }
+
+    private fun requestBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        if (!hasAnyLocationPermission()) return
+        if (hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) return
+
+        backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+    }
+
+    private fun hasAnyLocationPermission(): Boolean {
+        return hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
+            hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+    }
+
+    private fun hasPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun saveSetup(pin: String, token: String, chatId: String) {
