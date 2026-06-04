@@ -1,5 +1,7 @@
 package com.guilherme.honeypot.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -37,12 +39,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.guilherme.honeypot.data.AppPreferences
+import com.guilherme.honeypot.helper.CameraHelper
+import com.guilherme.honeypot.helper.LocationHelper
 import com.guilherme.honeypot.helper.TelegramNotifier
 import com.guilherme.honeypot.ui.theme.HoneypotTheme
 import com.guilherme.honeypot.ui.theme.InterFamily
@@ -181,6 +187,7 @@ private fun AdminGateScreen(
 private fun SettingsScreen(prefs: AppPreferences, onClose: () -> Unit) {
     val nuPurple = Color(0xFF820AD1)
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
 
     var newAdminPin by remember { mutableStateOf("") }
@@ -272,10 +279,38 @@ private fun SettingsScreen(prefs: AppPreferences, onClose: () -> Unit) {
             OutlinedButton(
                 onClick = {
                     scope.launch {
+                        val hasCameraPermission =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                                PackageManager.PERMISSION_GRANTED
+                        val hasLocationPermission =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                                PackageManager.PERMISSION_GRANTED ||
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                                    PackageManager.PERMISSION_GRANTED
+
+                        val location = if (hasLocationPermission) {
+                            LocationHelper(context).getCurrentLocation()
+                        } else {
+                            null
+                        }
+                        val photoFile = if (hasCameraPermission) {
+                            CameraHelper(context).captureSilent(lifecycleOwner)
+                        } else {
+                            null
+                        }
+                        val photoBytes = withContext(Dispatchers.IO) {
+                            photoFile?.readBytes()
+                        }
                         val ok = withContext(Dispatchers.IO) {
                             TelegramNotifier(token, chatId)
-                                .sendAlert(null, null, System.currentTimeMillis(), null)
+                                .sendAlert(
+                                    location?.latitude,
+                                    location?.longitude,
+                                    System.currentTimeMillis(),
+                                    photoBytes
+                                )
                         }
+                        photoFile?.delete()
                         Toast.makeText(
                             context,
                             if (ok) "Mensagem de teste enviada!" else "Falha ao enviar — verifique token/chatId",

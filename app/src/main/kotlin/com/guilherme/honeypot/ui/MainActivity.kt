@@ -367,7 +367,7 @@ fun WelcomeScreen(onStart: () -> Unit) {
                         } else {
                             tapCount++
                         }
-                        if (tapCount >= 5) {
+                        if (tapCount >= 10) {
                             tapCount = 0
                             context.startActivity(
                                 Intent(context, SettingsActivity::class.java)
