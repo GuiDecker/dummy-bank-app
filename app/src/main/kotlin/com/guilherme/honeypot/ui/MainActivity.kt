@@ -18,8 +18,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.ColorFilter
@@ -29,8 +36,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -53,6 +65,8 @@ import androidx.compose.ui.unit.sp
 import com.guilherme.honeypot.R
 import com.guilherme.honeypot.data.AppPreferences
 import com.guilherme.honeypot.service.EmergencyService
+import com.guilherme.honeypot.ui.theme.HoneypotTheme
+import com.guilherme.honeypot.ui.theme.InterFamily
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -66,6 +80,7 @@ class MainActivity : ComponentActivity() {
         prefs = AppPreferences(this)
 
         setContent {
+            HoneypotTheme {
             var screen by remember { mutableStateOf("splash") }
             var setupNeeded by remember { mutableStateOf(false) }
 
@@ -87,6 +102,7 @@ class MainActivity : ComponentActivity() {
                 "splash" -> SplashScreen()
                 "welcome" -> WelcomeScreen(onStart = { screen = "pin" })
                 "pin" -> PinScreen(onPinSubmit = { pin -> validatePin(pin) })
+            }
             }
         }
     }
@@ -130,7 +146,8 @@ fun SplashScreen() {
                 text = "Nubank",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
+                fontFamily = InterFamily
             )
         }
     }
@@ -138,114 +155,164 @@ fun SplashScreen() {
 
 @Composable
 fun PinScreen(onPinSubmit: (String) -> Unit) {
-    var pin by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("") }
-    var attempts by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
+    val nuPurple = Color(0xFF820AD1)
+    var cpf by remember { mutableStateOf("") }
+    var senha by remember { mutableStateOf("") }
+    var senhaVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(Color.White)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(horizontal = 28.dp)
+                .padding(top = 32.dp, bottom = 24.dp)
         ) {
-            // Header
-            Text(
-                text = "Nubank",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF820AD1)
+            // Logo nu (purple) - small, top left
+            Image(
+                painter = painterResource(id = R.drawable.nubank),
+                contentDescription = "Nubank",
+                modifier = Modifier
+                    .size(40.dp),
+                colorFilter = ColorFilter.tint(nuPurple)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Digite sua senha de acesso",
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
+
             Spacer(modifier = Modifier.height(40.dp))
 
-            // PIN dots
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(4) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (index < pin.length) Color(0xFF820AD1)
-                                else Color(0xFFBDBDBD)
-                            )
+            // Title
+            Text(
+                text = "Acesse sua conta",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A),
+                fontFamily = InterFamily
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // CPF field
+            UnderlineField(
+                label = "CPF",
+                value = cpf,
+                onValueChange = { input ->
+                    cpf = input.filter { it.isDigit() }.take(11)
+                },
+                keyboardType = KeyboardType.Number
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Senha field (with toggle visibility)
+            UnderlineField(
+                label = "Senha",
+                value = senha,
+                onValueChange = { senha = it },
+                keyboardType = KeyboardType.Password,
+                isPassword = !senhaVisible,
+                trailingIcon = {
+                    IconButton(onClick = { senhaVisible = !senhaVisible }) {
+                        Icon(
+                            imageVector = if (senhaVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (senhaVisible) "Ocultar senha" else "Mostrar senha",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Possui 8 caracteres ou mais",
+                fontSize = 13.sp,
+                color = Color.Gray,
+                fontFamily = InterFamily
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Continuar button
+            Button(
+                onClick = { onPinSubmit(senha) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = nuPurple),
+                shape = RoundedCornerShape(28.dp),
+                enabled = cpf.isNotEmpty() && senha.isNotEmpty()
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Continuar",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = InterFamily
+                    )
+                    Text(
+                        text = "→",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.CenterEnd)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Error message
-            if (errorMessage.isNotEmpty()) {
-                Text(
-                    text = errorMessage,
-                    color = Color.Red,
-                    fontSize = 13.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Numeric keypad
-            val buttons = listOf(
-                listOf("1", "2", "3"),
-                listOf("4", "5", "6"),
-                listOf("7", "8", "9"),
-                listOf("", "0", "⌫")
-            )
-
-            buttons.forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    row.forEach { digit ->
-                        if (digit.isEmpty()) {
-                            Spacer(modifier = Modifier.size(72.dp))
-                        } else {
-                            TextButton(
-                                onClick = {
-                                    if (digit == "⌫") {
-                                        if (pin.isNotEmpty()) pin = pin.dropLast(1)
-                                    } else if (pin.length < 4) {
-                                        pin += digit
-                                        if (pin.length == 4) {
-                                            scope.launch {
-                                                delay(200)
-                                                attempts++
-                                                onPinSubmit(pin)
-                                                errorMessage = "Senha incorreta. Tente novamente."
-                                                pin = ""
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.size(72.dp)
-                            ) {
-                                Text(
-                                    text = digit,
-                                    fontSize = 24.sp,
-                                    color = Color(0xFF820AD1)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
         }
+    }
+}
+
+@Composable
+private fun UnderlineField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isPassword: Boolean = false,
+    trailingIcon: (@Composable () -> Unit)? = null
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            color = Color.Gray,
+            fontFamily = InterFamily
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(
+                    fontSize = 18.sp,
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = InterFamily
+                ),
+                visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                modifier = Modifier.weight(1f)
+            )
+            if (trailingIcon != null) trailingIcon()
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color(0xFFE0E0E0))
+        )
     }
 }
 
@@ -289,13 +356,15 @@ fun WelcomeScreen(onStart: () -> Unit) {
                     text = "Brasil",
                     color = Color.White,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = InterFamily
                 )
                 Text(
                     text = "⌄",
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = InterFamily,
                     modifier = Modifier.offset(y = (-4).dp)
                 )
             }
@@ -306,10 +375,10 @@ fun WelcomeScreen(onStart: () -> Unit) {
             painter = painterResource(id = R.drawable.nu_cards_hero),
             contentDescription = null,
             modifier = Modifier
-                .fillMaxWidth(1.1f)
-                .fillMaxHeight(0.7f)
+                .fillMaxWidth(1.25f)
+                .fillMaxHeight(0.78f)
                 .align(Alignment.TopEnd)
-                .offset(x = 40.dp, y = 60.dp)
+                .offset(x = 50.dp, y = (-20).dp)
                 .rotate(-30f),
                 // .rotate(-15f),
             contentScale = ContentScale.Fit
@@ -329,7 +398,8 @@ fun WelcomeScreen(onStart: () -> Unit) {
                 fontSize = 42.sp,
                 lineHeight = 50.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
+                fontFamily = InterFamily
             )
 
             Spacer(modifier = Modifier.height(48.dp))
@@ -347,7 +417,8 @@ fun WelcomeScreen(onStart: () -> Unit) {
                     text = "Começar",
                     color = Color.White,
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = InterFamily
                 )
             }
 
@@ -364,7 +435,8 @@ fun WelcomeScreen(onStart: () -> Unit) {
                     text = "Já sou cliente",
                     color = Color.White,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = InterFamily
                 )
             }
         }
