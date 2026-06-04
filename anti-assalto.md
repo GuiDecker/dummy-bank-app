@@ -584,6 +584,9 @@ debug: install
 	adb logcat -s "Honeypot:*" "AndroidRuntime:E"
 ```
 
+final unique powershell:
+./gradlew installDebug; adb shell am start -n com.guilherme.honeypot/.ui.MainActivity
+
 ### 9.2. Comandos do dia a dia
 
 | Quero...                    | Comando          |
