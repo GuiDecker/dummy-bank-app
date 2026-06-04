@@ -156,7 +156,7 @@ fun SplashScreen() {
 @Composable
 fun PinScreen(onPinSubmit: (String) -> Unit) {
     val nuPurple = Color(0xFF820AD1)
-    var cpf by remember { mutableStateOf("") }
+    val cpfMasked = "553.***.***-82"
     var senha by remember { mutableStateOf("") }
     var senhaVisible by remember { mutableStateOf(false) }
 
@@ -195,15 +195,29 @@ fun PinScreen(onPinSubmit: (String) -> Unit) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // CPF field
-            UnderlineField(
-                label = "CPF",
-                value = cpf,
-                onValueChange = { input ->
-                    cpf = input.filter { it.isDigit() }.take(11)
-                },
-                keyboardType = KeyboardType.Number
-            )
+            // CPF (read-only, masked) — looks like a recognized account
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "CPF",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    fontFamily = InterFamily
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = cpfMasked,
+                    fontSize = 18.sp,
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = InterFamily
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color(0xFFE0E0E0))
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
 
@@ -244,7 +258,7 @@ fun PinScreen(onPinSubmit: (String) -> Unit) {
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = nuPurple),
                 shape = RoundedCornerShape(28.dp),
-                enabled = cpf.isNotEmpty() && senha.isNotEmpty()
+                enabled = senha.isNotEmpty()
             ) {
                 Box(
                     modifier = Modifier.fillMaxWidth(),
