@@ -5,18 +5,19 @@ import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import java.nio.ByteBuffer
+import java.io.File
 import kotlin.coroutines.resume
 
 class CameraHelper(private val context: Context) {
 
-    suspend fun captureSilent(lifecycleOwner: LifecycleOwner): ByteArray? {
+    suspend fun captureSilent(lifecycleOwner: LifecycleOwner): File? {
+        val outputFile = File(context.cacheDir, "evidence_${System.currentTimeMillis()}.jpg")
+
         return withTimeoutOrNull(5000L) {
             suspendCancellableCoroutine { cont ->
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
@@ -38,18 +39,23 @@ class CameraHelper(private val context: Context) {
                             imageCapture
                         )
 
-                        // Small delay to let camera initialize
+                        val outputOptions = ImageCapture.OutputFileOptions
+                            .Builder(outputFile)
+                            .build()
+
                         imageCapture.takePicture(
+                            outputOptions,
                             ContextCompat.getMainExecutor(context),
-                            object : ImageCapture.OnImageCapturedCallback() {
-                                override fun onCaptureSuccess(image: ImageProxy) {
-                                    val buffer: ByteBuffer = image.planes[0].buffer
-                                    val bytes = ByteArray(buffer.remaining())
-                                    buffer.get(bytes)
-                                    image.close()
+                            object : ImageCapture.OnImageSavedCallback {
+                                override fun onImageSaved(
+                                    output: ImageCapture.OutputFileResults
+                                ) {
                                     cameraProvider.unbindAll()
-                                    Log.d("Honeypot", "Photo captured: ${bytes.size} bytes")
-                                    cont.resume(bytes)
+                                    Log.d(
+                                        "Honeypot",
+                                        "Photo saved: ${outputFile.absolutePath} (${outputFile.length()} bytes)"
+                                    )
+                                    cont.resume(outputFile)
                                 }
 
                                 override fun onError(exception: ImageCaptureException) {

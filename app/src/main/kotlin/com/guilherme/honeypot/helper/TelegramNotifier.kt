@@ -25,13 +25,22 @@ class TelegramNotifier(
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    suspend fun sendAlert(location: Location?, photo: ByteArray?): Boolean {
+    suspend fun sendAlert(location: Location?, photo: ByteArray?): Boolean =
+        sendAlert(location?.latitude, location?.longitude, System.currentTimeMillis(), photo)
+
+    suspend fun sendAlert(
+        latitude: Double?,
+        longitude: Double?,
+        timestampMillis: Long,
+        photo: ByteArray?
+    ): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val timestamp = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale("pt", "BR")).format(Date())
-                val locationText = if (location != null) {
-                    val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
-                    "Lat: ${location.latitude}\nLon: ${location.longitude}\nMaps: $mapsLink"
+                val timestamp = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale("pt", "BR"))
+                    .format(Date(timestampMillis))
+                val locationText = if (latitude != null && longitude != null) {
+                    val mapsLink = "https://maps.google.com/?q=$latitude,$longitude"
+                    "Lat: $latitude\nLon: $longitude\nMaps: $mapsLink"
                 } else {
                     "Localização indisponível"
                 }

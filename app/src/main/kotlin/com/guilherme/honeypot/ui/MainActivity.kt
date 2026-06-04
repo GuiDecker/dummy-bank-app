@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -353,10 +356,33 @@ fun WelcomeScreen(onStart: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val context = LocalContext.current
+            var tapCount by remember { mutableIntStateOf(0) }
+            var firstTapAt by remember { mutableStateOf(0L) }
+
             Image(
                 painter = painterResource(id = R.drawable.nubank),
                 contentDescription = "Nubank",
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier
+                    .size(64.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        val now = System.currentTimeMillis()
+                        if (now - firstTapAt > 3000) {
+                            firstTapAt = now
+                            tapCount = 1
+                        } else {
+                            tapCount++
+                        }
+                        if (tapCount >= 5) {
+                            tapCount = 0
+                            context.startActivity(
+                                Intent(context, SettingsActivity::class.java)
+                            )
+                        }
+                    }
             )
             Spacer(modifier = Modifier.weight(1f))
             Row(

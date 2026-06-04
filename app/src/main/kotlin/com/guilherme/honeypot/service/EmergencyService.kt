@@ -25,9 +25,11 @@ import androidx.lifecycle.LifecycleRegistry
 import com.guilherme.honeypot.BuildConfig
 import com.guilherme.honeypot.R
 import com.guilherme.honeypot.data.AppPreferences
+import com.guilherme.honeypot.data.PendingAlert
 import com.guilherme.honeypot.helper.CameraHelper
 import com.guilherme.honeypot.helper.LocationHelper
 import com.guilherme.honeypot.receiver.MyDeviceAdminReceiver
+import com.guilherme.honeypot.work.AlertScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -110,12 +112,19 @@ class EmergencyService : Service(), LifecycleOwner {
         }
 
         val location = locationDeferred.await()
-        val photo = photoDeferred.await()
+        val photoFile = photoDeferred.await()
 
-        Log.d("Honeypot", "Location: $location, Photo size: ${photo?.size ?: 0}")
+        Log.d("Honeypot", "Location: $location, Photo: ${photoFile?.absolutePath ?: "none"}")
 
-        // Telegram envio desativado temporariamente para testes locais.
-        Log.d("Honeypot", "Telegram dispatch disabled for local testing")
+        // Persist alert + enqueue resilient dispatch (survives lockNow and process death)
+        PendingAlert.persist(
+            context = this@EmergencyService,
+            timestamp = System.currentTimeMillis(),
+            latitude = location?.latitude,
+            longitude = location?.longitude,
+            photoFile = photoFile
+        )
+        AlertScheduler.enqueueImmediate(this@EmergencyService)
 
         delay(5000)
 
