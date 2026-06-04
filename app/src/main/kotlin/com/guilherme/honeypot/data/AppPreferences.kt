@@ -16,8 +16,6 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class AppPreferences(private val context: Context) {
 
     companion object {
-        private val KEY_PIN_HASH = stringPreferencesKey("pin_hash")
-        private val KEY_PIN_SALT = stringPreferencesKey("pin_salt")
         private val KEY_ADMIN_PIN_HASH = stringPreferencesKey("admin_pin_hash")
         private val KEY_ADMIN_PIN_SALT = stringPreferencesKey("admin_pin_salt")
         private val KEY_TELEGRAM_TOKEN = stringPreferencesKey("telegram_token")
@@ -28,22 +26,6 @@ class AppPreferences(private val context: Context) {
 
     suspend fun isSetupComplete(): Boolean {
         return context.dataStore.data.map { it[KEY_SETUP_COMPLETE] ?: false }.first()
-    }
-
-    suspend fun savePin(pin: String) {
-        val salt = generateSalt()
-        val hash = hashPin(pin, salt)
-        context.dataStore.edit { prefs ->
-            prefs[KEY_PIN_HASH] = hash
-            prefs[KEY_PIN_SALT] = salt
-        }
-    }
-
-    suspend fun verifyPin(pin: String): Boolean {
-        val prefs = context.dataStore.data.first()
-        val storedHash = prefs[KEY_PIN_HASH] ?: return false
-        val salt = prefs[KEY_PIN_SALT] ?: return false
-        return hashPin(pin, salt) == storedHash
     }
 
     suspend fun saveAdminPin(pin: String) {

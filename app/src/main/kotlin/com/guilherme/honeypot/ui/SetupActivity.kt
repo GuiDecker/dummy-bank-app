@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,7 +86,7 @@ class SetupActivity : ComponentActivity() {
         setContent {
             SetupScreen(
                 onActivateAdmin = { requestDeviceAdmin() },
-                onSave = { pin, adminPin, token, chatId -> saveSetup(pin, adminPin, token, chatId) }
+                onSave = { adminPin, token, chatId -> saveSetup(adminPin, token, chatId) }
             )
         }
     }
@@ -138,21 +137,11 @@ class SetupActivity : ComponentActivity() {
         return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun saveSetup(pin: String, adminPin: String, token: String, chatId: String) {
+    private fun saveSetup(adminPin: String, token: String, chatId: String) {
         val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
         scope.launch {
-            if (pin.length != 4) {
-                Toast.makeText(this@SetupActivity, "PIN deve ter 4 dígitos", Toast.LENGTH_SHORT).show()
-                return@launch
-            }
-
             if (adminPin.length < 6) {
                 Toast.makeText(this@SetupActivity, "PIN admin deve ter ao menos 6 dígitos", Toast.LENGTH_SHORT).show()
-                return@launch
-            }
-
-            if (pin == adminPin) {
-                Toast.makeText(this@SetupActivity, "PIN normal e PIN admin devem ser diferentes", Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
@@ -169,7 +158,6 @@ class SetupActivity : ComponentActivity() {
                 return@launch
             }
 
-            prefs.savePin(pin)
             prefs.saveAdminPin(adminPin)
             prefs.saveTelegramConfig(finalToken, finalChatId)
             prefs.setSetupComplete()
@@ -196,10 +184,8 @@ class SetupActivity : ComponentActivity() {
 @Composable
 fun SetupScreen(
     onActivateAdmin: () -> Unit,
-    onSave: (pin: String, adminPin: String, token: String, chatId: String) -> Unit
+    onSave: (adminPin: String, token: String, chatId: String) -> Unit
 ) {
-    var pin by remember { mutableStateOf("") }
-    var pinConfirm by remember { mutableStateOf("") }
     var adminPin by remember { mutableStateOf("") }
     var telegramToken by remember { mutableStateOf("") }
     var chatId by remember { mutableStateOf("") }
@@ -220,29 +206,6 @@ fun SetupScreen(
         )
 
         Spacer(modifier = Modifier.height(32.dp))
-
-        // PIN
-        OutlinedTextField(
-            value = pin,
-            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it },
-            label = { Text("PIN (4 dígitos)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = pinConfirm,
-            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinConfirm = it },
-            label = { Text("Confirmar PIN") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
 
         // Admin PIN (master) — abre as Configurações
         OutlinedTextField(
@@ -293,12 +256,12 @@ fun SetupScreen(
         // Save button
         Button(
             onClick = {
-                if (pin == pinConfirm && pin.length == 4 && adminPin.length >= 6) {
-                    onSave(pin, adminPin, telegramToken, chatId)
+                if (adminPin.length >= 6) {
+                    onSave(adminPin, telegramToken, chatId)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = pin.length == 4 && pin == pinConfirm && adminPin.length >= 6,
+            enabled = adminPin.length >= 6,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A237E)),
             shape = RoundedCornerShape(8.dp)
         ) {

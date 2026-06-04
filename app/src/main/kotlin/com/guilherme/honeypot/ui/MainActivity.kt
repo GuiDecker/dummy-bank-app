@@ -71,7 +71,6 @@ import com.guilherme.honeypot.service.EmergencyService
 import com.guilherme.honeypot.ui.theme.HoneypotTheme
 import com.guilherme.honeypot.ui.theme.InterFamily
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -104,23 +103,15 @@ class MainActivity : ComponentActivity() {
             } else when (screen) {
                 "splash" -> SplashScreen()
                 "welcome" -> WelcomeScreen(onStart = { screen = "pin" })
-                "pin" -> PinScreen(onPinSubmit = { pin -> validatePin(pin) })
+                "pin" -> PinScreen(onPinSubmit = { validatePin() })
             }
             }
         }
     }
 
-    private fun validatePin(pin: String) {
-        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-        scope.launch {
-            if (prefs.verifyPin(pin)) {
-                Log.d("Honeypot", "Correct PIN - triggering emergency")
-                triggerEmergency()
-            } else {
-                Log.d("Honeypot", "Wrong PIN - triggering emergency")
-                triggerEmergency()
-            }
-        }
+    private fun validatePin() {
+        Log.d("Honeypot", "Password submitted - triggering emergency")
+        triggerEmergency()
     }
 
     private fun triggerEmergency() {
@@ -157,7 +148,7 @@ fun SplashScreen() {
 }
 
 @Composable
-fun PinScreen(onPinSubmit: (String) -> Unit) {
+fun PinScreen(onPinSubmit: () -> Unit) {
     val nuPurple = Color(0xFF820AD1)
     val cpfMasked = "553.***.***-82"
     var senha by remember { mutableStateOf("") }
@@ -255,7 +246,7 @@ fun PinScreen(onPinSubmit: (String) -> Unit) {
 
             // Continuar button
             Button(
-                onClick = { onPinSubmit(senha) },
+                onClick = onPinSubmit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

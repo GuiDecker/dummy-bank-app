@@ -183,7 +183,6 @@ private fun SettingsScreen(prefs: AppPreferences, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var newPin by remember { mutableStateOf("") }
     var newAdminPin by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var chatId by remember { mutableStateOf("") }
@@ -230,25 +229,6 @@ private fun SettingsScreen(prefs: AppPreferences, onClose: () -> Unit) {
 
             // PINs
             SectionTitle("Senhas")
-            OutlinedTextField(
-                value = newPin,
-                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPin = it },
-                label = { Text("Novo PIN normal (4 dígitos)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Deixe em branco para manter o PIN atual",
-                fontSize = 12.sp,
-                color = Color.Gray,
-                fontFamily = InterFamily
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = newAdminPin,
                 onValueChange = { if (it.length <= 12 && it.all { c -> c.isDigit() }) newAdminPin = it },
@@ -315,24 +295,12 @@ private fun SettingsScreen(prefs: AppPreferences, onClose: () -> Unit) {
             Button(
                 onClick = {
                     scope.launch {
-                        var changed = false
-
-                        if (newPin.isNotEmpty()) {
-                            if (newPin.length != 4) {
-                                Toast.makeText(context, "PIN normal deve ter 4 dígitos", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
-                            prefs.savePin(newPin)
-                            changed = true
-                        }
-
                         if (newAdminPin.isNotEmpty()) {
                             if (newAdminPin.length < 6) {
                                 Toast.makeText(context, "PIN admin deve ter 6+ dígitos", Toast.LENGTH_SHORT).show()
                                 return@launch
                             }
                             prefs.saveAdminPin(newAdminPin)
-                            changed = true
                         }
 
                         if (token.isEmpty() || chatId.isEmpty()) {
@@ -341,11 +309,10 @@ private fun SettingsScreen(prefs: AppPreferences, onClose: () -> Unit) {
                         }
 
                         prefs.saveTelegramConfig(token, chatId)
-                        changed = true
 
                         Toast.makeText(
                             context,
-                            if (changed) "Configurações salvas" else "Nada para salvar",
+                            "Configurações salvas",
                             Toast.LENGTH_SHORT
                         ).show()
                         onClose()
